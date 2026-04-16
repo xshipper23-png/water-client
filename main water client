@@ -1,23 +1,62 @@
 local WaterLib = {}
 WaterLib.TabCount = 0
 local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 
--- 1. Hintergrund-Effekt (Blur)
-local Blur = Instance.new("BlurEffect")
+-- Blur Effekt
+local Blur = Instance.new("BlurEffect", Lighting)
 Blur.Size = 0
 Blur.Enabled = false
-Blur.Parent = Lighting
 
--- 2. Haupt-GUI Container
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "WaterClient_UI"
+-- Haupt Container
+local ScreenGui = Instance.new("ScreenGui", CoreGui)
+ScreenGui.Name = "WaterClient_Premium"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Enabled = false
-ScreenGui.Parent = CoreGui
 
--- 3. Drag-Logik (Macht Tabs verschiebbar)
+-- HUD für FPS und Ping (Immer sichtbar)
+local HUD = Instance.new("ScreenGui", CoreGui)
+HUD.Name = "WaterHUD"
+
+local infoFrame = Instance.new("Frame", HUD)
+infoFrame.Size = UDim2.new(0, 120, 0, 50)
+infoFrame.Position = UDim2.new(0, 10, 0.5, -25)
+infoFrame.BackgroundTransparency = 0.5
+infoFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+
+local uiCornerHUD = Instance.new("UICorner", infoFrame)
+uiCornerHUD.CornerRadius = UDim.new(0, 8)
+
+local fpsLabel = Instance.new("TextLabel", infoFrame)
+fpsLabel.Size = UDim2.new(1, 0, 0.5, 0)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+fpsLabel.Font = Enum.Font.GothamBold
+fpsLabel.TextSize = 14
+fpsLabel.Text = "FPS: ..."
+
+local pingLabel = Instance.new("TextLabel", infoFrame)
+pingLabel.Size = UDim2.new(1, 0, 0.5, 0)
+pingLabel.Position = UDim2.new(0, 0, 0.5, 0)
+pingLabel.BackgroundTransparency = 1
+pingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+pingLabel.Font = Enum.Font.GothamBold
+pingLabel.TextSize = 14
+pingLabel.Text = "Ping: ..."
+
+-- FPS & Ping Update Loop
+spawn(function()
+    while wait(1) do
+        local fps = math.floor(1 / RunService.RenderStepped:Wait())
+        fpsLabel.Text = "FPS: " .. fps
+        local ping = tonumber(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString():match("%d+"))
+        pingLabel.Text = "Ping: " .. math.floor(ping) .. "ms"
+    end
+end)
+
+-- Drag Funktion
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     frame.InputBegan:Connect(function(input)
@@ -34,72 +73,67 @@ local function makeDraggable(frame)
         end
     end)
     frame.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
     end)
 end
 
--- 4. Funktion: Tab erstellen (nebeneinander angeordnet)
+-- Tab erstellen
 function WaterLib:CreateTab(name)
-    local TabFrame = Instance.new("Frame")
-    TabFrame.Name = name
-    -- Positioniert Tabs automatisch nebeneinander (200 Pixel Abstand)
-    TabFrame.Position = UDim2.new(0, 20 + (WaterLib.TabCount * 200), 0, 20)
-    TabFrame.Size = UDim2.new(0, 180, 0, 30) 
-    TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    local TabFrame = Instance.new("Frame", ScreenGui)
+    TabFrame.Size = UDim2.new(0, 160, 0, 32)
+    TabFrame.Position = UDim2.new(0, 30 + (WaterLib.TabCount * 180), 0, 50)
+    TabFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
     TabFrame.BorderSizePixel = 0
-    TabFrame.Parent = ScreenGui
     
-    local Header = Instance.new("TextLabel")
-    Header.Size = UDim2.new(1, 0, 0, 30)
-    Header.Text = name
-    Header.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Water Blue
-    Header.TextColor3 = Color3.new(1, 1, 1)
+    local corner = Instance.new("UICorner", TabFrame)
+    
+    local Header = Instance.new("TextLabel", TabFrame)
+    Header.Size = UDim2.new(1, 0, 1, 0)
+    Header.Text = name:upper()
+    Header.TextColor3 = Color3.fromRGB(0, 150, 255)
     Header.Font = Enum.Font.GothamBold
-    Header.Parent = TabFrame
-    
-    local Container = Instance.new("Frame")
-    Container.Name = "Container"
-    Container.Position = UDim2.new(0, 0, 0, 30)
+    Header.BackgroundTransparency = 1
+    Header.TextSize = 14
+
+    local Container = Instance.new("Frame", TabFrame)
+    Container.Position = UDim2.new(0, 0, 1, 5)
     Container.Size = UDim2.new(1, 0, 0, 0)
     Container.AutomaticSize = Enum.AutomaticSize.Y
     Container.BackgroundTransparency = 1
-    Container.Parent = TabFrame
     
-    local Layout = Instance.new("UIListLayout")
-    Layout.Parent = Container
-    Layout.SortOrder = Enum.SortOrder.LayoutOrder
+    local layout = Instance.new("UIListLayout", Container)
+    layout.Spacing = UDim.new(0, 2)
     
     makeDraggable(TabFrame)
     WaterLib.TabCount = WaterLib.TabCount + 1
     return Container
 end
 
--- 5. Funktion: Module (Buttons) hinzufügen
+-- Button erstellen
 function WaterLib:AddModule(parent, text, callback)
-    local Enabled = false
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(1, 0, 0, 30)
-    Button.Text = text
-    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-    Button.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-    Button.Font = Enum.Font.Gotham
-    Button.BorderSizePixel = 0
-    Button.Parent = parent
+    local enabled = false
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, 0, 0, 28)
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 12
+    btn.AutoButtonColor = false
+    
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
 
-    Button.MouseButton1Click:Connect(function()
-        Enabled = not Enabled
-        Button.TextColor3 = Enabled and Color3.new(1, 1, 1) or Color3.new(0.8, 0.8, 0.8)
-        Button.BackgroundColor3 = Enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(40, 40, 40)
-        callback(Enabled)
+    btn.MouseButton1Click:Connect(function()
+        enabled = not enabled
+        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(30, 30, 30)
+        btn.TextColor3 = enabled and Color3.new(1,1,1) or Color3.fromRGB(200,200,200)
+        callback(enabled)
     end)
 end
 
--- 6. Keybind: Rechts-Shift zum Öffnen/Schließen
+-- Open/Close
 UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
+    if not gpe and input.KeyCode == Enum.KeyCode.RightShift then
         ScreenGui.Enabled = not ScreenGui.Enabled
         Blur.Enabled = ScreenGui.Enabled
         Blur.Size = ScreenGui.Enabled and 15 or 0
