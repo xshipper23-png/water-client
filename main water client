@@ -1,23 +1,23 @@
--- Water Client Framework v1.0
 local WaterLib = {}
+WaterLib.TabCount = 0
 local UIS = game:GetService("UserInputService")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 
--- Setup für den Hintergrund-Blur
+-- 1. Hintergrund-Effekt (Blur)
 local Blur = Instance.new("BlurEffect")
 Blur.Size = 0
 Blur.Enabled = false
 Blur.Parent = Lighting
 
--- Haupt-Container für die GUI
+-- 2. Haupt-GUI Container
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "WaterClient_UI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Enabled = false
 ScreenGui.Parent = CoreGui
 
--- Drag-Logik Funktion
+-- 3. Drag-Logik (Macht Tabs verschiebbar)
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     frame.InputBegan:Connect(function(input)
@@ -40,11 +40,13 @@ local function makeDraggable(frame)
     end)
 end
 
--- Funktion: Tab erstellen (z.B. Combat, Movement)
+-- 4. Funktion: Tab erstellen (nebeneinander angeordnet)
 function WaterLib:CreateTab(name)
     local TabFrame = Instance.new("Frame")
     TabFrame.Name = name
-    TabFrame.Size = UDim2.new(0, 180, 0, 40) -- Startgröße (wächst mit Inhalten)
+    -- Positioniert Tabs automatisch nebeneinander (200 Pixel Abstand)
+    TabFrame.Position = UDim2.new(0, 20 + (WaterLib.TabCount * 200), 0, 20)
+    TabFrame.Size = UDim2.new(0, 180, 0, 30) 
     TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     TabFrame.BorderSizePixel = 0
     TabFrame.Parent = ScreenGui
@@ -69,30 +71,32 @@ function WaterLib:CreateTab(name)
     Layout.Parent = Container
     Layout.SortOrder = Enum.SortOrder.LayoutOrder
     
-    makeDraggable(TabFrame) -- Macht den Tab verschiebbar
+    makeDraggable(TabFrame)
+    WaterLib.TabCount = WaterLib.TabCount + 1
     return Container
 end
 
--- Funktion: Button hinzufügen (Toggle)
+-- 5. Funktion: Module (Buttons) hinzufügen
 function WaterLib:AddModule(parent, text, callback)
     local Enabled = false
     local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(1, 0, 0, 25)
+    Button.Size = UDim2.new(1, 0, 0, 30)
     Button.Text = text
-    Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
     Button.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+    Button.Font = Enum.Font.Gotham
     Button.BorderSizePixel = 0
     Button.Parent = parent
 
     Button.MouseButton1Click:Connect(function()
         Enabled = not Enabled
         Button.TextColor3 = Enabled and Color3.new(1, 1, 1) or Color3.new(0.8, 0.8, 0.8)
-        Button.BackgroundColor3 = Enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(45, 45, 45)
+        Button.BackgroundColor3 = Enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(40, 40, 40)
         callback(Enabled)
     end)
 end
 
--- Toggle Key (Right Shift)
+-- 6. Keybind: Rechts-Shift zum Öffnen/Schließen
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.RightShift then
