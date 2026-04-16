@@ -5,64 +5,57 @@ local RunService = game:GetService("RunService")
 local Lighting = game:GetService("Lighting")
 local CoreGui = game:GetService("CoreGui")
 
--- Blur Effekt
+-- 1. Hintergrund-Effekt
 local Blur = Instance.new("BlurEffect", Lighting)
 Blur.Size = 0
 Blur.Enabled = false
 
--- Haupt Container (Schutz vor Fehlern beim Mehrfachladen)
-local old = CoreGui:FindFirstChild("WaterClient_Premium")
-if old then old:Destroy() end
+-- Altes Menü löschen falls vorhanden
+if CoreGui:FindFirstChild("WaterClient_Premium") then CoreGui["WaterClient_Premium"]:Destroy() end
+if CoreGui:FindFirstChild("WaterHUD") then CoreGui["WaterHUD"]:Destroy() end
 
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "WaterClient_Premium"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Enabled = false
 
--- HUD für FPS und Ping (Rechts Oben)
-local oldHUD = CoreGui:FindFirstChild("WaterHUD")
-if oldHUD then oldHUD:Destroy() end
-
+-- 2. HUD (Rechts Oben)
 local HUD = Instance.new("ScreenGui", CoreGui)
 HUD.Name = "WaterHUD"
 
 local infoFrame = Instance.new("Frame", HUD)
-infoFrame.Size = UDim2.new(0, 120, 0, 45)
-infoFrame.Position = UDim2.new(1, -130, 0, 10) -- RECHTS OBEN
-infoFrame.BackgroundTransparency = 0.5
+infoFrame.Size = UDim2.new(0, 110, 0, 45)
+infoFrame.Position = UDim2.new(1, -120, 0, 10)
 infoFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
+infoFrame.BackgroundTransparency = 0.4
+Instance.new("UICorner", infoFrame)
 
 local fpsLabel = Instance.new("TextLabel", infoFrame)
 fpsLabel.Size = UDim2.new(1, 0, 0.5, 0)
-fpsLabel.BackgroundTransparency = 1
-fpsLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
-fpsLabel.Font = Enum.Font.GothamBold
-fpsLabel.TextSize = 13
 fpsLabel.Text = "FPS: ..."
+fpsLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
+fpsLabel.BackgroundTransparency = 1
+fpsLabel.Font = Enum.Font.GothamBold
 
 local pingLabel = Instance.new("TextLabel", infoFrame)
 pingLabel.Size = UDim2.new(1, 0, 0.5, 0)
 pingLabel.Position = UDim2.new(0, 0, 0.5, 0)
-pingLabel.BackgroundTransparency = 1
-pingLabel.TextColor3 = Color3.new(1, 1, 1)
-pingLabel.Font = Enum.Font.GothamBold
-pingLabel.TextSize = 13
 pingLabel.Text = "Ping: ..."
+pingLabel.TextColor3 = Color3.new(1, 1, 1)
+pingLabel.BackgroundTransparency = 1
+pingLabel.Font = Enum.Font.GothamBold
 
--- FPS & Ping Loop (Sicherer gemacht)
 task.spawn(function()
     while true do
         local fps = math.floor(1 / RunService.RenderStepped:Wait())
         fpsLabel.Text = "FPS: " .. fps
         local p = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
-        local pingValue = p:match("%d+") or "0"
-        pingLabel.Text = "Ping: " .. pingValue .. "ms"
+        pingLabel.Text = "Ping: " .. (p:match("%d+") or "0") .. "ms"
         task.wait(1)
     end
 end)
 
--- Drag Funktion
+-- 3. Drag Logik
 local function makeDraggable(frame)
     local dragging, dragInput, dragStart, startPos
     frame.InputBegan:Connect(function(input)
@@ -83,12 +76,11 @@ local function makeDraggable(frame)
     end)
 end
 
--- Tab erstellen
+-- 4. Tabs erstellen
 function WaterLib:CreateTab(name)
     local TabFrame = Instance.new("Frame", ScreenGui)
-    TabFrame.Name = name .. "Tab"
     TabFrame.Size = UDim2.new(0, 160, 0, 32)
-    TabFrame.Position = UDim2.new(0, 30 + (WaterLib.TabCount * 180), 0, 50)
+    TabFrame.Position = UDim2.new(0, 20 + (WaterLib.TabCount * 170), 0, 50)
     TabFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     TabFrame.BorderSizePixel = 0
     Instance.new("UICorner", TabFrame)
@@ -99,7 +91,6 @@ function WaterLib:CreateTab(name)
     Header.TextColor3 = Color3.fromRGB(0, 150, 255)
     Header.Font = Enum.Font.GothamBold
     Header.BackgroundTransparency = 1
-    Header.TextSize = 14
 
     local Container = Instance.new("Frame", TabFrame)
     Container.Name = "Container"
@@ -109,29 +100,25 @@ function WaterLib:CreateTab(name)
     Container.BackgroundTransparency = 1
     
     local layout = Instance.new("UIListLayout", Container)
-    layout.Spacing = UDim.new(0, 2)
-    layout.Padding = Padding or UDim.new(0,0) -- Sicherung
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.Padding = UDim.new(0, 2) -- DER FIX: UDim statt einfacher Zahl
     
     makeDraggable(TabFrame)
     WaterLib.TabCount = WaterLib.TabCount + 1
     return Container
 end
 
--- Button erstellen
+-- 5. Buttons erstellen
 function WaterLib:AddModule(parent, text, callback)
-    if not parent then return warn("Fehler: Kein Tab für Modul '"..text.."' gefunden!") end
-    
     local enabled = false
     local btn = Instance.new("TextButton", parent)
-    btn.Name = text
     btn.Size = UDim2.new(1, 0, 0, 28)
     btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.Font = Enum.Font.Gotham
-    btn.TextSize = 12
-    btn.AutoButtonColor = false
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn.BorderSizePixel = 0
+    Instance.new("UICorner", btn)
 
     btn.MouseButton1Click:Connect(function()
         enabled = not enabled
