@@ -1,1 +1,105 @@
+-- Water Client Framework v1.0
+local WaterLib = {}
+local UIS = game:GetService("UserInputService")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
 
+-- Setup für den Hintergrund-Blur
+local Blur = Instance.new("BlurEffect")
+Blur.Size = 0
+Blur.Enabled = false
+Blur.Parent = Lighting
+
+-- Haupt-Container für die GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "WaterClient_UI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Enabled = false
+ScreenGui.Parent = CoreGui
+
+-- Drag-Logik Funktion
+local function makeDraggable(frame)
+    local dragging, dragInput, dragStart, startPos
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+end
+
+-- Funktion: Tab erstellen (z.B. Combat, Movement)
+function WaterLib:CreateTab(name)
+    local TabFrame = Instance.new("Frame")
+    TabFrame.Name = name
+    TabFrame.Size = UDim2.new(0, 180, 0, 40) -- Startgröße (wächst mit Inhalten)
+    TabFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    TabFrame.BorderSizePixel = 0
+    TabFrame.Parent = ScreenGui
+    
+    local Header = Instance.new("TextLabel")
+    Header.Size = UDim2.new(1, 0, 0, 30)
+    Header.Text = name
+    Header.BackgroundColor3 = Color3.fromRGB(0, 120, 255) -- Water Blue
+    Header.TextColor3 = Color3.new(1, 1, 1)
+    Header.Font = Enum.Font.GothamBold
+    Header.Parent = TabFrame
+    
+    local Container = Instance.new("Frame")
+    Container.Name = "Container"
+    Container.Position = UDim2.new(0, 0, 0, 30)
+    Container.Size = UDim2.new(1, 0, 0, 0)
+    Container.AutomaticSize = Enum.AutomaticSize.Y
+    Container.BackgroundTransparency = 1
+    Container.Parent = TabFrame
+    
+    local Layout = Instance.new("UIListLayout")
+    Layout.Parent = Container
+    Layout.SortOrder = Enum.SortOrder.LayoutOrder
+    
+    makeDraggable(TabFrame) -- Macht den Tab verschiebbar
+    return Container
+end
+
+-- Funktion: Button hinzufügen (Toggle)
+function WaterLib:AddModule(parent, text, callback)
+    local Enabled = false
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1, 0, 0, 25)
+    Button.Text = text
+    Button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    Button.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+    Button.BorderSizePixel = 0
+    Button.Parent = parent
+
+    Button.MouseButton1Click:Connect(function()
+        Enabled = not Enabled
+        Button.TextColor3 = Enabled and Color3.new(1, 1, 1) or Color3.new(0.8, 0.8, 0.8)
+        Button.BackgroundColor3 = Enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(45, 45, 45)
+        callback(Enabled)
+    end)
+end
+
+-- Toggle Key (Right Shift)
+UIS.InputBegan:Connect(function(input, gpe)
+    if gpe then return end
+    if input.KeyCode == Enum.KeyCode.RightShift then
+        ScreenGui.Enabled = not ScreenGui.Enabled
+        Blur.Enabled = ScreenGui.Enabled
+        Blur.Size = ScreenGui.Enabled and 15 or 0
+    end
+end)
+
+return WaterLib
