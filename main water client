@@ -10,49 +10,55 @@ local Blur = Instance.new("BlurEffect", Lighting)
 Blur.Size = 0
 Blur.Enabled = false
 
--- Haupt Container
+-- Haupt Container (Schutz vor Fehlern beim Mehrfachladen)
+local old = CoreGui:FindFirstChild("WaterClient_Premium")
+if old then old:Destroy() end
+
 local ScreenGui = Instance.new("ScreenGui", CoreGui)
 ScreenGui.Name = "WaterClient_Premium"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Enabled = false
 
--- HUD für FPS und Ping (Immer sichtbar)
+-- HUD für FPS und Ping (Rechts Oben)
+local oldHUD = CoreGui:FindFirstChild("WaterHUD")
+if oldHUD then oldHUD:Destroy() end
+
 local HUD = Instance.new("ScreenGui", CoreGui)
 HUD.Name = "WaterHUD"
 
 local infoFrame = Instance.new("Frame", HUD)
-infoFrame.Size = UDim2.new(0, 120, 0, 50)
-infoFrame.Position = UDim2.new(0, 10, 0.5, -25)
+infoFrame.Size = UDim2.new(0, 120, 0, 45)
+infoFrame.Position = UDim2.new(1, -130, 0, 10) -- RECHTS OBEN
 infoFrame.BackgroundTransparency = 0.5
 infoFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-
-local uiCornerHUD = Instance.new("UICorner", infoFrame)
-uiCornerHUD.CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", infoFrame).CornerRadius = UDim.new(0, 8)
 
 local fpsLabel = Instance.new("TextLabel", infoFrame)
 fpsLabel.Size = UDim2.new(1, 0, 0.5, 0)
 fpsLabel.BackgroundTransparency = 1
 fpsLabel.TextColor3 = Color3.fromRGB(0, 170, 255)
 fpsLabel.Font = Enum.Font.GothamBold
-fpsLabel.TextSize = 14
+fpsLabel.TextSize = 13
 fpsLabel.Text = "FPS: ..."
 
 local pingLabel = Instance.new("TextLabel", infoFrame)
 pingLabel.Size = UDim2.new(1, 0, 0.5, 0)
 pingLabel.Position = UDim2.new(0, 0, 0.5, 0)
 pingLabel.BackgroundTransparency = 1
-pingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+pingLabel.TextColor3 = Color3.new(1, 1, 1)
 pingLabel.Font = Enum.Font.GothamBold
-pingLabel.TextSize = 14
+pingLabel.TextSize = 13
 pingLabel.Text = "Ping: ..."
 
--- FPS & Ping Update Loop
-spawn(function()
-    while wait(1) do
+-- FPS & Ping Loop (Sicherer gemacht)
+task.spawn(function()
+    while true do
         local fps = math.floor(1 / RunService.RenderStepped:Wait())
         fpsLabel.Text = "FPS: " .. fps
-        local ping = tonumber(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString():match("%d+"))
-        pingLabel.Text = "Ping: " .. math.floor(ping) .. "ms"
+        local p = game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValueString()
+        local pingValue = p:match("%d+") or "0"
+        pingLabel.Text = "Ping: " .. pingValue .. "ms"
+        task.wait(1)
     end
 end)
 
@@ -80,12 +86,12 @@ end
 -- Tab erstellen
 function WaterLib:CreateTab(name)
     local TabFrame = Instance.new("Frame", ScreenGui)
+    TabFrame.Name = name .. "Tab"
     TabFrame.Size = UDim2.new(0, 160, 0, 32)
     TabFrame.Position = UDim2.new(0, 30 + (WaterLib.TabCount * 180), 0, 50)
-    TabFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    TabFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     TabFrame.BorderSizePixel = 0
-    
-    local corner = Instance.new("UICorner", TabFrame)
+    Instance.new("UICorner", TabFrame)
     
     local Header = Instance.new("TextLabel", TabFrame)
     Header.Size = UDim2.new(1, 0, 1, 0)
@@ -96,6 +102,7 @@ function WaterLib:CreateTab(name)
     Header.TextSize = 14
 
     local Container = Instance.new("Frame", TabFrame)
+    Container.Name = "Container"
     Container.Position = UDim2.new(0, 0, 1, 5)
     Container.Size = UDim2.new(1, 0, 0, 0)
     Container.AutomaticSize = Enum.AutomaticSize.Y
@@ -103,6 +110,7 @@ function WaterLib:CreateTab(name)
     
     local layout = Instance.new("UIListLayout", Container)
     layout.Spacing = UDim.new(0, 2)
+    layout.Padding = Padding or UDim.new(0,0) -- Sicherung
     
     makeDraggable(TabFrame)
     WaterLib.TabCount = WaterLib.TabCount + 1
@@ -111,23 +119,25 @@ end
 
 -- Button erstellen
 function WaterLib:AddModule(parent, text, callback)
+    if not parent then return warn("Fehler: Kein Tab für Modul '"..text.."' gefunden!") end
+    
     local enabled = false
     local btn = Instance.new("TextButton", parent)
+    btn.Name = text
     btn.Size = UDim2.new(1, 0, 0, 28)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(200, 200, 200)
     btn.Font = Enum.Font.Gotham
     btn.TextSize = 12
     btn.AutoButtonColor = false
-    
     Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
 
     btn.MouseButton1Click:Connect(function()
         enabled = not enabled
-        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(30, 30, 30)
+        btn.BackgroundColor3 = enabled and Color3.fromRGB(0, 120, 255) or Color3.fromRGB(35, 35, 35)
         btn.TextColor3 = enabled and Color3.new(1,1,1) or Color3.fromRGB(200,200,200)
-        callback(enabled)
+        task.spawn(function() callback(enabled) end)
     end)
 end
 
